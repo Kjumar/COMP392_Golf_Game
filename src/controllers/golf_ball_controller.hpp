@@ -29,6 +29,9 @@ namespace lve
 
         bool showReticle();
         float getPowerRatio();
+
+        void resetBall(glm::vec3 position);
+        bool isMoving();
         
         LveGameObject& gameObject;
         // horizontal rotation for where the player is aiming

@@ -105,4 +105,15 @@ namespace lve
     {
         return power / maxPower;
     }
+
+    void GolfBallController::resetBall(glm::vec3 position)
+    {
+        velocity = { 0.0f, 0.0f, 0.0f };
+        gameObject.transform.translation = position;
+    }
+
+    bool GolfBallController::isMoving()
+    {
+        return moving;
+    }
 }

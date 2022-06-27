@@ -108,6 +108,12 @@ namespace lve {
         // keep track of the old keystate for the C key (to help simulate "OnKeyDown" events)
         bool keyStateC = false;
 
+        // starting location for each track
+        glm::vec3 tees[] = {
+            { 0.0f, -0.11f, 0.0f },
+            { 18.0f, -0.11f, 7.0f }};
+        int current_tee = 0;
+
         auto currentTime = std::chrono::high_resolution_clock::now();
 
         std::cout << "Controls: \n  WASD - pivot the camera\n";
@@ -124,18 +130,23 @@ namespace lve {
             float frameTime = std::min(std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count(), 0.1f);
             currentTime = newTime;
 
+            if (playerBall->transform.translation.y > 0.2f)
+            {
+                // ball reset plane
+                if (playerBall->transform.translation.y > 10)
+                {
+                    ballController.resetBall(tees[current_tee]);
+                }
+                else if (!ballController.isMoving())
+                {
+                    current_tee = (current_tee + 1) % 2;
+                    ballController.resetBall(tees[current_tee]);
+                }
+            }
+
             // ============================
             // if the user pressed the C key, swap camera controls
             // ============================
-            if (glfwGetKey(lveWindow.getGLFWwindow(), GLFW_KEY_1) == GLFW_PRESS)
-            {
-                playerBall->transform.translation = { 0.0f, -0.11f, 0.0f };
-            }
-            else if (glfwGetKey(lveWindow.getGLFWwindow(), GLFW_KEY_2) == GLFW_PRESS)
-            {
-                playerBall->transform.translation = { 18.0f, -0.11f, 7.0f };
-            }
-
             if (glfwGetKey(lveWindow.getGLFWwindow(), GLFW_KEY_C) == GLFW_PRESS)
             {
                 if (!keyStateC)
