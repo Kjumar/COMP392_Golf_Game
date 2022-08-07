@@ -12,15 +12,15 @@ namespace lve
         if (isAttached)
         {
             glm::vec3 rotate{ 0 };
-            if (glfwGetKey(window, keys.lookRight) == GLFW_PRESS) rotate.y += 1.0f;
-            if (glfwGetKey(window, keys.lookLeft) == GLFW_PRESS) rotate.y -= 1.0f;
+            if (glfwGetKey(window, keys.lookRight) == GLFW_PRESS) rotate.y += 90.0f * dt;
+            if (glfwGetKey(window, keys.lookLeft) == GLFW_PRESS) rotate.y -= 90.0f * dt;
 
             if (!moving)
             {
                 if (aiming)
                 {
-                    if (glfwGetKey(window, keys.lookUp) == GLFW_PRESS) power += 0.2f;
-                    if (glfwGetKey(window, keys.lookDown) == GLFW_PRESS) power -= 0.2f;
+                    if (glfwGetKey(window, keys.lookUp) == GLFW_PRESS) power += maxPower * dt;
+                    if (glfwGetKey(window, keys.lookDown) == GLFW_PRESS) power -= maxPower * dt;
                     power = glm::clamp(power, 0.0f, maxPower);
 
                     if (glfwGetKey(window, keys.launch) == GLFW_RELEASE)
@@ -35,8 +35,8 @@ namespace lve
                 }
                 else
                 {
-                    if (glfwGetKey(window, keys.lookUp) == GLFW_PRESS) rotate.x += 1.0f;
-                    if (glfwGetKey(window, keys.lookDown) == GLFW_PRESS) rotate.x -= 1.0f;
+                    if (glfwGetKey(window, keys.lookUp) == GLFW_PRESS) rotate.x += 90.0f * dt;
+                    if (glfwGetKey(window, keys.lookDown) == GLFW_PRESS) rotate.x -= 90.0f * dt;
 
                     if (glfwGetKey(window, keys.launch) == GLFW_PRESS)
                     {
@@ -59,12 +59,18 @@ namespace lve
             aimRotation.y = glm::mod(aimRotation.y, glm::two_pi<float>());
         }
 
-        if (glm::dot(velocity, velocity) < 0.1)
+        if (glm::dot(velocity, velocity) < 0.05)
         {
             moving = false;
             return;
         }
 
+        if (bIsGrounded)
+        {
+            glm::vec3 loss = glm::normalize(velocity);
+            velocity = velocity - ((loss * friction + velocity * drag) * dt);
+            bIsGrounded = false;
+        }
         velocity.y += gravity * dt;
         glm::vec3 movement = {velocity.x, velocity.y, velocity.z};
 
@@ -87,13 +93,15 @@ namespace lve
         // for now, since all floors should be soft, I'm just doing it manually
         if (collision.normal.y <= -0.9f)
         {
-            impulse = glm::dot(velocity, collision.normal) * 1.25f;
+            impulse = glm::dot(velocity, collision.normal) * 1.5f;
         }
         else
         {
             impulse = glm::dot(velocity, collision.normal) * 2;
         }
-        velocity = (velocity - (collision.normal * impulse)) * friction;
+        velocity = velocity - (collision.normal * impulse);
+
+        bIsGrounded = true;
     }
 
     bool GolfBallController::showReticle()

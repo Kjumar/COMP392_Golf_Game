@@ -45,10 +45,12 @@ namespace lve
         float maxPower{ 10.0f };
 		float lookSpeed{ 1.5f };
         float gravity{ 9.8f };
-        float friction{ 0.99f };
+        float friction{ 0.5f };
+        float drag{ 0.5f };
 
         bool moving = false;
         bool aiming = false;
+        bool bIsGrounded = false;
 
         SphereCollider collider;
     };

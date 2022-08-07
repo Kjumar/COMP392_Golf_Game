@@ -59,32 +59,12 @@ namespace lve
                 return false;
             }
         }
-
-        float closest = 0;
-        glm::vec3 closestVec{};
-        for (int x = -1; x < 2; x += 2)
-        {
-            for (int y = -1; y < 2; y += 2)
-            {
-                for (int z = -1; z < 2; z += 2)
-                {
-                    glm::vec3 vertexDir = (axes[0] * static_cast<float>(x))
-                        + (axes[1] * static_cast<float>(y))
-                        + (axes[2] * static_cast<float>(z));
-                    float vertexDist = glm::dot(vertexDir, d);
-
-                    if (vertexDist > closest)
-                    {
-                        closest = vertexDist;
-                        closestVec = vertexDir;
-                    }
-                }
-            }
-        }
-        // this part needs some work
-        float mag = glm::length(closestVec);
-        glm::vec3 normal{closestVec.x / mag, closestVec.y / mag, closestVec.z / mag};
-        if (isSeparated(d, normal, mag, other.radius))
+        
+        float c1 = glm::abs(glm::dot(axes[0], d));
+        float c2 = glm::abs(glm::dot(axes[1], d));
+        float c3 = glm::abs(glm::dot(axes[2], d));
+        float v = glm::dot(d, d);
+        if (v > c1 + c2 + c3 + other.radius)
         {
             return false;
         }
