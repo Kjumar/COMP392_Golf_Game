@@ -10,9 +10,12 @@
 
 namespace lve
 {
+
+    const AABB WORLDSIZE = {0, glm::vec2(-1000, -1000), glm::vec2(1000, 1000)};
+
     CollisionManager::CollisionManager()
     {
-
+        
     }
 
     glm::vec3 CollisionManager::readVec3(const std::string& line)
@@ -78,5 +81,52 @@ namespace lve
         colliderFile.close();
 
         return colliders;
+    }
+
+    void CollisionManager::InsertStaticCollider(ICollider* collider)
+    {
+
+        staticColliders.push_back(collider);
+    }
+
+    void CollisionManager::buildStaticTree()
+    {
+        for (ICollider* col : staticColliders)
+        {
+            AABB box = col->GetAABB();
+            std::cout << box.colliderIndex << ": (" << box.min.x << ", " << box.min.y << ") (" << box.max.x << ", " << box.max.y << ")\n";
+        }
+        for (int i = 0; i < staticColliders.size(); i++)
+        {
+
+            AABB aabb = staticColliders[i]->GetAABB();
+            aabb.colliderIndex = i;
+
+            staticTree.Insert(aabb, WORLDSIZE);
+        }
+
+        // staticTree.Display("root");
+    }
+
+    void CollisionManager::GetCollisions(ICollider& other, void (*OnCollision)(void*, Collision), void* context)
+    {
+        std::vector<int> colliderIndices;
+        staticTree.Retrieve(colliderIndices, other.GetAABB(), WORLDSIZE);
+
+        for (int i : colliderIndices)
+        {
+            ICollider* ic = staticColliders[i];
+            if (ic->CollidesWith(other) && other.CollidesWith(*ic))
+            {
+                Collision collision{};
+                if (ic->GetImpulse(&other, collision))
+                {
+                    if (OnCollision != nullptr)
+                    {
+                        OnCollision(context, collision);
+                    }
+                }
+            }
+        }
     }
 }

@@ -92,6 +92,12 @@ namespace lve {
         CollisionManager collisionManager{};
         std::vector<BoxCollider> colliders = collisionManager.readCollidersFromFile("models/hole2_colliders.boxc");
 
+        for (BoxCollider collider : colliders)
+        {
+            collisionManager.InsertStaticCollider(new BoxCollider(collider));
+        }
+        collisionManager.buildStaticTree();
+
         // direct refereces to objects I want to control
         LveGameObject* playerBall = &(gameObjects.find(1)->second);
         GolfBallController ballController{*playerBall, 0.09f};
@@ -167,17 +173,7 @@ namespace lve {
             //      there is no broad phase detection
             // ====================================
             SphereCollider& sc = ballController.getCollider();
-            for (BoxCollider bc : colliders)
-            {
-                if (bc.isColliding(sc))
-                {
-                    Collision collision{};
-                    if (bc.getImpulse(sc, collision))
-                    {
-                        ballController.onCollision(collision);
-                    }
-                }
-            }
+            collisionManager.GetCollisions(sc, &GolfBallController::ForawrdOnCollision, &ballController);
 
             // ballOutline->transform.translation = playerBall->transform.translation;
 

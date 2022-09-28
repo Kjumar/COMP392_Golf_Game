@@ -26,6 +26,10 @@ namespace lve
 
         SphereCollider& getCollider();
         void onCollision(const Collision& collision);
+        static void ForawrdOnCollision(void* context, Collision collision)
+        {
+            static_cast<GolfBallController*>(context)->onCollision(collision);
+        }
 
         bool showReticle();
         float getPowerRatio();

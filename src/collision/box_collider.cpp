@@ -7,8 +7,9 @@
 namespace lve
 {
     BoxCollider::BoxCollider(glm::vec3 position, glm::vec4 axis1, glm::vec4 axis2, glm::vec4 axis3)
-        : position{ position }
     {
+        this->position = position;
+
         normals[0] = axis1;
         normals[1] = axis2;
         normals[2] = axis3;
@@ -19,8 +20,9 @@ namespace lve
     }
 
     BoxCollider::BoxCollider(glm::vec3 position, glm::vec3 axis1, glm::vec3 axis2, glm::vec3 axis3)
-        : position{ position }
     {
+        this->position = position;
+
         axes[0] = axis1;
         axes[1] = axis2;
         axes[2] = axis3;
@@ -47,39 +49,39 @@ namespace lve
         return false;
     }
 
-    bool BoxCollider::isColliding(const SphereCollider& other)
-    {
-        glm::vec3 d = other.position - position;
+    // bool BoxCollider::isColliding(const SphereCollider& other)
+    // {
+    //     glm::vec3 d = other.position - position;
 
-        for (glm::vec4 axis : normals)
-        {
-            glm::vec3 normal{ axis.x, axis.y, axis.z };
-            if (isSeparated(d, normal, axis.w, other.radius))
-            {
-                return false;
-            }
-        }
+    //     for (glm::vec4 axis : normals)
+    //     {
+    //         glm::vec3 normal{ axis.x, axis.y, axis.z };
+    //         if (isSeparated(d, normal, axis.w, other.radius))
+    //         {
+    //             return false;
+    //         }
+    //     }
         
-        float c1 = glm::abs(glm::dot(axes[0], d));
-        float c2 = glm::abs(glm::dot(axes[1], d));
-        float c3 = glm::abs(glm::dot(axes[2], d));
-        float v = glm::dot(d, d);
-        if (v > c1 + c2 + c3 + other.radius)
-        {
-            return false;
-        }
+    //     float c1 = glm::abs(glm::dot(axes[0], d));
+    //     float c2 = glm::abs(glm::dot(axes[1], d));
+    //     float c3 = glm::abs(glm::dot(axes[2], d));
+    //     float v = glm::dot(d, d);
+    //     if (v > c1 + c2 + c3 + other.radius)
+    //     {
+    //         return false;
+    //     }
 
-        return true;
-    }
+    //     return true;
+    // }
 
-    bool BoxCollider::getImpulse(SphereCollider& other, Collision& collision)
+    bool BoxCollider::GetImpulse(ICollider* other, Collision& collision)
     {
         /*
             a, b, c | x   [ax + by + cz] = l1
             d, e, f | y = [dx + ey + fz] = l2
             g, h, i | z   [gx + hy + iz] = l3
             */
-        glm::vec3 delta = other.position - position;
+        glm::vec3 delta = other->position - position;
 
         float component1 = glm::dot(delta, { normals[0].x, normals[0].y, normals[0].z });
         float component2 = glm::dot(delta, { normals[1].x, normals[1].y, normals[1].z });
@@ -141,7 +143,8 @@ namespace lve
         normal = { worldSpaceNorm.x, worldSpaceNorm.y, worldSpaceNorm.z };
         float length = glm::dot(normal, normal);
 
-        if (length > other.radius * other.radius && !inside)
+        float otherLength = other->GetLengthAlongNormal(glm::normalize(normal));
+        if (length > otherLength * otherLength && !inside)
         {
             return false;
         }
@@ -151,14 +154,50 @@ namespace lve
         if (inside)
         {
             collision.normal = normal * -1.0f;
-            collision.depth = other.radius - length;
+            collision.depth = otherLength - length;
         }
         else
         {
             collision.normal = normal;
-            collision.depth = other.radius - length;
+            collision.depth = otherLength - length;
         }
 
         return true;
+    }
+
+    bool BoxCollider::CollidesWith(ICollider& other)
+    {
+        glm::vec3 d = other.position - position;
+
+        for (glm::vec4 axis : normals)
+        {
+            glm::vec3 normal{ axis.x, axis.y, axis.z };
+            if (isSeparated(d, normal, axis.w, other.GetLengthAlongNormal(normal)))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    float BoxCollider::GetLengthAlongNormal(glm::vec3 normal) const
+    {
+        float c1 = glm::abs(glm::dot(axes[0], normal));
+        float c2 = glm::abs(glm::dot(axes[1], normal));
+        float c3 = glm::abs(glm::dot(axes[2], normal));
+
+        return c1 + c2 + c3;
+    }
+
+    AABB BoxCollider::GetAABB()
+    {
+        float xLength = GetLengthAlongNormal(glm::vec3(1, 0, 0));
+        float zLength = GetLengthAlongNormal(glm::vec3(0, 0, 1));
+
+        AABB aabb = {0, glm::vec2(position.x - xLength, position.z - zLength),
+            glm::vec2(position.x + xLength, position.z + zLength)};
+
+        return aabb;
     }
 }
