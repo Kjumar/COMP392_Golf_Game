@@ -6,6 +6,7 @@
 #include "systems/point_light_system.hpp"
 #include "systems/transparent_render_system.hpp"
 #include "systems/outline_render_system.hpp"
+#include "systems/wireframe_render_system.hpp"
 
 #include "collision/collision.hpp"
 #include "collision/collision_manager.hpp"
@@ -37,7 +38,7 @@ namespace lve {
             .setMaxSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT)
             .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, LveSwapChain::MAX_FRAMES_IN_FLIGHT)
             .build();
-    loadGameObjects();
+        loadGameObjects();
     }
 
     FirstApp::~FirstApp() {}
@@ -82,6 +83,9 @@ namespace lve {
         OutlineRenderSystem outlineRenderer{
             lveDevice, lveRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout()
         };
+        WireframeRenderSystem wireframeRenderer{
+            lveDevice, lveRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout()
+        };
         LveCamera camera{};
         camera.setViewTarget(glm::vec3(-1.0f, -2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 2.5f));
 
@@ -92,9 +96,14 @@ namespace lve {
         CollisionManager collisionManager{};
         std::vector<BoxCollider> colliders = collisionManager.readCollidersFromFile("models/hole2_colliders.boxc");
 
+        bool showCollisionDebug = false;
+        std::vector<LveModel*> staticColliderWireframes;
+
         for (BoxCollider collider : colliders)
         {
             collisionManager.InsertStaticCollider(new BoxCollider(collider));
+
+            staticColliderWireframes.push_back(collider.GetWireFrame(lveDevice, {0.0f, 1.0f, 0.0f}));
         }
         collisionManager.buildStaticTree();
 
@@ -113,6 +122,7 @@ namespace lve {
 
         // keep track of the old keystate for the C key (to help simulate "OnKeyDown" events)
         bool keyStateC = false;
+        bool keyStateKPAdd = false;
 
         // starting location for each track
         glm::vec3 tees[] = {
@@ -167,15 +177,25 @@ namespace lve {
             }
             ballController.update(lveWindow.getGLFWwindow(), frameTime);
 
+            if (glfwGetKey(lveWindow.getGLFWwindow(), GLFW_KEY_KP_ADD) == GLFW_PRESS)
+            {
+                if (!keyStateKPAdd)
+                {
+                    showCollisionDebug = !showCollisionDebug;
+                    keyStateKPAdd = true;
+                }
+            }
+            else
+            {
+                keyStateKPAdd = false;
+            }
+
             // ====================================
             // Collision phase of the loop
             //      for this game, I'm only checking collision between the ball and each box collider
-            //      there is no broad phase detection
             // ====================================
             SphereCollider& sc = ballController.getCollider();
             collisionManager.GetCollisions(sc, &GolfBallController::ForawrdOnCollision, &ballController);
-
-            // ballOutline->transform.translation = playerBall->transform.translation;
 
             // if the player is currently focusing on the ball, pivot the camera around the ball
             // This could probably use its own controller, but as its behaviour is very specific to this case in the program
@@ -243,6 +263,10 @@ namespace lve {
                 outlineRenderer.renderGameObjects(frameInfo);
                 PointLightSystem.render(frameInfo);
                 transparentRender.renderGameObjects(frameInfo, transparentObjects);
+                if (showCollisionDebug)
+                {
+                    wireframeRenderer.renderGameObjects(frameInfo, staticColliderWireframes);
+                }
                 lveRenderer.endSwapChainRenderPass(commandBuffer);
                 lveRenderer.endFrame();
             }

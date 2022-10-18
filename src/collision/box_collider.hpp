@@ -21,6 +21,8 @@ namespace lve
         float GetLengthAlongNormal(glm::vec3 normal) const;
         AABB GetAABB();
 
+        LveModel* GetWireFrame(LveDevice& device, glm::vec3 color);
+
     private:
         bool isSeparated(glm::vec3 distance, glm::vec3 normal, float width1, float width2);
 

@@ -223,4 +223,10 @@ void LvePipeline::enableAlphaBlending(PipelineConfigInfo& configInfo)
   configInfo.colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 }
 
+void LvePipeline::enableBackfaceCulling(PipelineConfigInfo& configInfo)
+{
+  configInfo.rasterizationInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+  configInfo.rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+}
+
 }  // namespace lve

@@ -1,4 +1,4 @@
-#include "outline_render_system.hpp"
+#include "wireframe_render_system.hpp"
 
 // libs
 #define GLM_FORCE_RADIANS
@@ -13,27 +13,26 @@
 
 namespace lve {
 
-    struct SimplePushConstantData
+    struct WireframePushConstantData
     {
         glm::mat4 modelMatrix{ 1.f };
-        glm::mat4 normalMatrix{ 1.0f };
     };
 
-    OutlineRenderSystem::OutlineRenderSystem(
+    WireframeRenderSystem::WireframeRenderSystem(
         LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout)
         : lveDevice{ device } {
         createPipelineLayout(globalSetLayout);
         createPipeline(renderPass);
     }
 
-    OutlineRenderSystem::~OutlineRenderSystem() { vkDestroyPipelineLayout(lveDevice.device(), pipelineLayout, nullptr); }
+    WireframeRenderSystem::~WireframeRenderSystem() { vkDestroyPipelineLayout(lveDevice.device(), pipelineLayout, nullptr); }
 
-    void OutlineRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
+    void WireframeRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
 
         VkPushConstantRange pushConstantRange{};
         pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
         pushConstantRange.offset = 0;
-        pushConstantRange.size = sizeof(SimplePushConstantData);
+        pushConstantRange.size = sizeof(WireframePushConstantData);
 
         std::vector<VkDescriptorSetLayout> descriptorSetLayouts{ globalSetLayout };
 
@@ -49,24 +48,26 @@ namespace lve {
         }
     }
 
-    void OutlineRenderSystem::createPipeline(VkRenderPass renderPass) {
+    void WireframeRenderSystem::createPipeline(VkRenderPass renderPass) {
         assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 
         PipelineConfigInfo pipelineConfig{};
         LvePipeline::defaultPipelineConfigInfo(pipelineConfig);
-        pipelineConfig.rasterizationInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-        pipelineConfig.rasterizationInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+
+        pipelineConfig.rasterizationInfo.polygonMode = VK_POLYGON_MODE_LINE;
+        pipelineConfig.depthStencilInfo.depthTestEnable = VK_FALSE;
+        pipelineConfig.depthStencilInfo.depthWriteEnable = VK_FALSE;
 
         pipelineConfig.renderPass = renderPass;
         pipelineConfig.pipelineLayout = pipelineLayout;
         lvePipeline = std::make_unique<LvePipeline>(
             lveDevice,
-            "shaders/inverted_hull.vert.spv",
-            "shaders/inverted_hull.frag.spv",
+            "shaders/unlit_shader.vert.spv",
+            "shaders/unlit_shader.frag.spv",
             pipelineConfig);
     }
 
-    void OutlineRenderSystem::renderGameObjects(FrameInfo &frameInfo)
+    void WireframeRenderSystem::renderGameObjects(FrameInfo &frameInfo, std::vector<LveModel*> models)
     {
         lvePipeline->bind(frameInfo.commandBuffer);
 
@@ -80,21 +81,24 @@ namespace lve {
             0,
             nullptr);
 
-        for (auto& kv : frameInfo.gameObjects) {
-            auto& obj = kv.second;
-            if (obj.model == nullptr || !obj.isVisible || !obj.outline) continue;
-            SimplePushConstantData push{};
-            push.modelMatrix = obj.transform.mat4();
-            push.normalMatrix = obj.transform.normalMatrix();
+        for (auto& kv : models) {
+            if (kv == nullptr) continue;
+            WireframePushConstantData push{};
+            push.modelMatrix = glm::mat4{
+                {1.0f, 0.0f, 0.0f, 0.0f},
+                {0.0f, 1.0f, 0.0f, 0.0f},
+                {0.0f, 0.0f, 1.0f, 0.0f},
+                {0.0f, 0.0f, 0.0f, 1.0f}
+            };
 
             vkCmdPushConstants(frameInfo.commandBuffer,
                 pipelineLayout,
                 VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                 0,
-                sizeof(SimplePushConstantData),
+                sizeof(WireframePushConstantData),
                 &push);
-            obj.model->bind(frameInfo.commandBuffer);
-            obj.model->draw(frameInfo.commandBuffer);
+            kv->bind(frameInfo.commandBuffer);
+            kv->draw(frameInfo.commandBuffer);
         }
     }
 

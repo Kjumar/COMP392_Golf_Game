@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include <iostream>
+#include <vector>
 
 namespace lve
 {
@@ -199,5 +200,45 @@ namespace lve
             glm::vec2(position.x + xLength, position.z + zLength)};
 
         return aabb;
+    }
+
+    LveModel* BoxCollider::GetWireFrame(LveDevice& device, glm::vec3 color)
+    {
+        LveModel::Builder builder;
+
+        builder.vertices.push_back({position + axes[0] + axes[1] + axes[2], color});
+        builder.vertices.push_back({position + axes[0] + axes[1] - axes[2], color});
+        builder.vertices.push_back({position + axes[0] - axes[1] + axes[2], color});
+        builder.vertices.push_back({position + axes[0] - axes[1] - axes[2], color});
+        builder.vertices.push_back({position - axes[0] + axes[1] + axes[2], color});
+        builder.vertices.push_back({position - axes[0] + axes[1] - axes[2], color});
+        builder.vertices.push_back({position - axes[0] - axes[1] + axes[2], color});
+        builder.vertices.push_back({position - axes[0] - axes[1] - axes[2], color});
+
+        builder.indices.push_back(0);
+        builder.indices.push_back(1);
+        builder.indices.push_back(2);
+
+        builder.indices.push_back(5);
+        builder.indices.push_back(6);
+        builder.indices.push_back(7);
+
+        builder.indices.push_back(0);
+        builder.indices.push_back(4);
+        builder.indices.push_back(5);
+
+        builder.indices.push_back(2);
+        builder.indices.push_back(3);
+        builder.indices.push_back(7);
+
+        builder.indices.push_back(2);
+        builder.indices.push_back(4);
+        builder.indices.push_back(6);
+
+        builder.indices.push_back(1);
+        builder.indices.push_back(3);
+        builder.indices.push_back(5);
+
+        return new LveModel(device, builder);
     }
 }

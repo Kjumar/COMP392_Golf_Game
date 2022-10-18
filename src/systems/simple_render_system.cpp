@@ -54,6 +54,7 @@ namespace lve {
 
         PipelineConfigInfo pipelineConfig{};
         LvePipeline::defaultPipelineConfigInfo(pipelineConfig);
+        LvePipeline::enableBackfaceCulling(pipelineConfig);
         pipelineConfig.renderPass = renderPass;
         pipelineConfig.pipelineLayout = pipelineLayout;
         lvePipeline = std::make_unique<LvePipeline>(

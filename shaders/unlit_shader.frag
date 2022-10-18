@@ -1,9 +1,6 @@
 #version 450
 
 layout(location = 0) in vec3 fragColor;
-layout(location = 1) in vec3 fragPosWorld;
-layout(location = 2) in vec3 fragNormalWorld;
-
 
 layout(location = 0) out vec4 outColor;
 
@@ -23,12 +20,10 @@ layout(set = 0, binding = 0) uniform GlobalUbo {
 } ubo;
 
 layout(push_constant) uniform Push {
-	mat4 modelMatrix; 
-	mat4 normalMatrix;
+	mat4 modelMatrix;
 } push;
 
-
-void main() {
-
-	outColor = vec4(fragColor, 1.0);
+void main()
+{
+    outColor = vec4(fragColor, 1.0);
 }

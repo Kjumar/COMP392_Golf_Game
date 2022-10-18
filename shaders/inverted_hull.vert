@@ -34,8 +34,10 @@ void main() {
 	vec4 positionWorld = push.modelMatrix * vec4(position, 1.0);
 	fragNormalWorld = normalize(mat3(push.normalMatrix) * normal);
 
-	vec4 outlineNormal = vec4(fragNormalWorld.xyz, 0.0);
-	gl_Position = ubo.projection * ubo.view * (positionWorld + outlineNormal * 0.015);
+	vec4 outlineNormal = vec4(fragNormalWorld.xyz, 0.0) * 0.003;
+	mat4 view_transform = ubo.projection * ubo.view;
+	float outline_thickness = clamp((view_transform * positionWorld).w / 2, 1.0, 2.0);
+	gl_Position = view_transform * (positionWorld + (outlineNormal * outline_thickness));
 	fragPosWorld = positionWorld.xyz;
 	fragColor = vec3(0.0);
 }
