@@ -20,7 +20,7 @@ namespace lve {
 		SimpleRenderSystem(const SimpleRenderSystem&) = delete;
 		SimpleRenderSystem& operator=(const SimpleRenderSystem&) = delete;
 
-		void renderGameObjects(FrameInfo &frameInfo);
+		void renderGameObjects(FrameInfo &frameInfo, int materialId);
 
 	private:
 		void createPipelineLayout(VkDescriptorSetLayout globalSetLayout);

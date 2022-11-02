@@ -2,6 +2,7 @@
 
 #include "collision.hpp"
 #include "quad_tree.hpp"
+#include "../lve_game_object.hpp"
 #include <glm/glm.hpp>
 
 namespace lve
@@ -16,5 +17,6 @@ namespace lve
         virtual bool GetImpulse(ICollider* other, Collision& collision) = 0;
 
         glm::vec3 position;
+        LveGameObject* gameObject = nullptr;
     };
 }

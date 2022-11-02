@@ -59,16 +59,15 @@ namespace lve
             aimRotation.y = glm::mod(aimRotation.y, glm::two_pi<float>());
         }
 
-        if (glm::dot(velocity, velocity) < 0.05)
+        if (!moving)
         {
-            moving = false;
             return;
         }
 
         if (bIsGrounded)
         {
             glm::vec3 loss = glm::normalize(velocity);
-            velocity = velocity - ((loss * friction + velocity * drag) * dt);
+            velocity = velocity - ((loss * drag + velocity * friction) * dt);
             bIsGrounded = false;
         }
         velocity.y += gravity * dt;
@@ -91,17 +90,34 @@ namespace lve
         float impulse;
         // the collision struct could use a value to 'dampen' the object's energy on impact
         // for now, since all floors should be soft, I'm just doing it manually
-        if (collision.normal.y <= -0.9f)
+        if (collision.normal.y <= -0.6f)
         {
-            impulse = glm::dot(velocity, collision.normal) * 1.5f;
+            impulse = glm::dot(velocity, collision.normal) * 1.55f;
         }
         else
         {
-            impulse = glm::dot(velocity, collision.normal) * 2;
+            impulse = glm::dot(velocity, collision.normal) * 1.95f;
         }
         velocity = velocity - (collision.normal * impulse);
 
-        bIsGrounded = true;
+        if (collision.normal.y <= -0.99)
+        {
+            bIsGrounded = true;
+
+            if (glm::dot(velocity, velocity) < 0.005)
+            {
+                moving = false;
+
+                if (collision.gameObject != nullptr && collision.gameObject->tag != courseIds[currentCourse])
+                {
+                    resetBall();
+                }
+                else
+                {
+                    previousPos = gameObject.transform.translation;
+                }
+            }
+        }
     }
 
     bool GolfBallController::showReticle()
@@ -116,12 +132,29 @@ namespace lve
 
     void GolfBallController::resetBall(glm::vec3 position)
     {
+        moving = false;
+        bIsGrounded = true;
         velocity = { 0.0f, 0.0f, 0.0f };
         gameObject.transform.translation = position;
+        previousPos = position;
+    }
+
+    void GolfBallController::resetBall()
+    {
+        moving = false;
+        bIsGrounded = true;
+        velocity = { 0.0f, 0.0f, 0.0f };
+        gameObject.transform.translation = previousPos;
     }
 
     bool GolfBallController::isMoving()
     {
         return moving;
+    }
+
+    void GolfBallController::nextHole(glm::vec3 position)
+    {
+        resetBall(position);
+        currentCourse = (currentCourse + 1) % courseIds.size();
     }
 }

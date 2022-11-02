@@ -1,6 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
+#include "../lve_game_object.hpp"
 
 namespace lve
 {
@@ -8,5 +9,6 @@ namespace lve
     {
         glm::vec3 normal{};
         float depth{};
+        LveGameObject* gameObject;
     };
 }

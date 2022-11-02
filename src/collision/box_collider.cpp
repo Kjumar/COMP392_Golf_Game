@@ -163,6 +163,8 @@ namespace lve
             collision.depth = otherLength - length;
         }
 
+        collision.gameObject = gameObject;
+
         return true;
     }
 

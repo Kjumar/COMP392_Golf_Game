@@ -8,6 +8,7 @@
 // std
 #include <memory>
 #include <unordered_map>
+#include <string>
 
 namespace lve
 {
@@ -60,6 +61,9 @@ namespace lve
 		float specular = 0.0f;
 		float alpha = 1.0f;
 		bool outline = false;
+		int materialId = 0;
+
+		std::string tag = "default";
 
 	private:
 		LveGameObject(id_t objId) : id{ objId } {}

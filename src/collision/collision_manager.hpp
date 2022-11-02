@@ -16,7 +16,7 @@ namespace lve
     public:
         CollisionManager();
 
-        std::vector<BoxCollider> readCollidersFromFile(const std::string& filename);
+        static std::vector<BoxCollider> readCollidersFromFile(const std::string& filename);
 
         void InsertStaticCollider(ICollider* collider);
         
@@ -25,7 +25,7 @@ namespace lve
         void GetCollisions(ICollider& collider, void (*OnCollision)(void*, Collision), void* context);
 
     private:
-        glm::vec3 readVec3(const std::string& line);
+        static glm::vec3 readVec3(const std::string& line);
 
         bool rebuildTree = true;
 

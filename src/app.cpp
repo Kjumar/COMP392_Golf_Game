@@ -1,15 +1,13 @@
-#include "first_app.hpp"
+#include "app.hpp"
 
 #include "lve_camera.hpp"
 #include "lve_buffer.hpp"
-#include "systems/simple_render_system.hpp"
-#include "systems/point_light_system.hpp"
-#include "systems/transparent_render_system.hpp"
-#include "systems/outline_render_system.hpp"
-#include "systems/wireframe_render_system.hpp"
-
-#include "collision/collision.hpp"
-#include "collision/collision_manager.hpp"
+#include "rendersystems/simple_render_system.hpp"
+#include "rendersystems/point_light_system.hpp"
+#include "rendersystems/transparent_render_system.hpp"
+#include "rendersystems/outline_render_system.hpp"
+#include "rendersystems/wireframe_render_system.hpp"
+#include "rendersystems/golfturf_render_system.hpp"
 
 //#include "controllers/orbit_controller.hpp"
 #include "controllers/keyboard_movement_controller.hpp"
@@ -24,6 +22,7 @@
 // std
 #include <array>
 #include <chrono>
+#include <thread>
 #include <cassert>
 #include <stdexcept>
 #include <iostream>
@@ -33,7 +32,7 @@
 
 namespace lve {
 
-    FirstApp::FirstApp() {
+    App::App() {
         globalPool = LveDescriptorPool::Builder(lveDevice)
             .setMaxSets(LveSwapChain::MAX_FRAMES_IN_FLIGHT)
             .addPoolSize(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, LveSwapChain::MAX_FRAMES_IN_FLIGHT)
@@ -41,9 +40,9 @@ namespace lve {
         loadGameObjects();
     }
 
-    FirstApp::~FirstApp() {}
+    App::~App() {}
 
-    void FirstApp::run() {
+    void App::run() {
         srand(time(NULL));
         std::vector<std::unique_ptr<LveBuffer>> uboBuffers(LveSwapChain::MAX_FRAMES_IN_FLIGHT);
         for (int i = 0; i < uboBuffers.size(); i++)
@@ -75,6 +74,8 @@ namespace lve {
         // ================================
         SimpleRenderSystem simpleRenderSystem{
             lveDevice, lveRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout() };
+        GolfturfRenderSystem golfTurfRenderSystem{
+            lveDevice, lveRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout() };
         PointLightSystem PointLightSystem{
             lveDevice, lveRenderer.getSwapChainRenderPass(), globalSetLayout->getDescriptorSetLayout() };
         TransparentRenderSystem transparentRender{
@@ -93,8 +94,40 @@ namespace lve {
         viewerObject.transform.translation.z = -2.5f;
         KeyboardMovementController cameraController{};
 
+        // setting up the game objects for each course
+        LveGameObject courses[9] = { LveGameObject::createGameObject(),
+            LveGameObject::createGameObject(),
+            LveGameObject::createGameObject(),
+            LveGameObject::createGameObject(),
+            LveGameObject::createGameObject(),
+            LveGameObject::createGameObject(),
+            LveGameObject::createGameObject(),
+            LveGameObject::createGameObject(),
+            LveGameObject::createGameObject()};
+        courses[0].tag = "c1";
+        courses[1].tag = "c2";
+        courses[2].tag = "c3";
+        courses[3].tag = "c4";
+        courses[4].tag = "c5";
+        courses[5].tag = "c6";
+        courses[6].tag = "c7";
+        courses[7].tag = "c8";
+        courses[8].tag = "c9";
+
         CollisionManager collisionManager{};
-        std::vector<BoxCollider> colliders = collisionManager.readCollidersFromFile("models/hole2_colliders.boxc");
+        std::vector<BoxCollider> colliders = CollisionManager::readCollidersFromFile("models/collision/hole1_colliders.boxc");
+        for (BoxCollider bc : colliders)
+        {
+            bc.gameObject = &courses[0];
+        }
+
+        loadColliders(colliders, "models/collision/hole2_colliders.boxc", &courses[1]);
+        loadColliders(colliders, "models/collision/hole3_colliders.boxc", &courses[2]);
+        loadColliders(colliders, "models/collision/hole4_colliders.boxc", &courses[3]);
+        loadColliders(colliders, "models/collision/hole5_colliders.boxc", &courses[4]);
+        loadColliders(colliders, "models/collision/hole6_colliders.boxc", &courses[5]);
+        loadColliders(colliders, "models/collision/hole7_colliders.boxc", &courses[6]);
+        loadColliders(colliders, "models/collision/hole8_colliders.boxc", &courses[7]);
 
         bool showCollisionDebug = false;
         std::vector<LveModel*> staticColliderWireframes;
@@ -107,18 +140,33 @@ namespace lve {
         }
         collisionManager.buildStaticTree();
 
+        // triggers for each golf hole. They're not passed to the collision manager since we'll be handling these ourselves
+        BoxCollider goals[9] = {
+            BoxCollider({14.0f, 0.5f, 0.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f}),
+            BoxCollider({22.0f, 0.5f, 8.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f}),
+            BoxCollider({28.0f, -1.5f, -4.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f}),
+            BoxCollider({28.0f, 0.5f, -22.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f}),
+            BoxCollider({20.0f, 0.5f, -42.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f}),
+            BoxCollider({1.5f, 0.5f, -46.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f}),
+            BoxCollider({-10.0f, 0.5f, -31.5f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f}),
+            BoxCollider({-20.0f, 0.0f, -20.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f}),
+            BoxCollider({10.5f, 0.5f, -24.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f})
+        };
+
+        for (BoxCollider collider : goals)
+        {
+            staticColliderWireframes.push_back(collider.GetWireFrame(lveDevice, {1.0f, 1.0f, 0.0f}));
+        }
+
         // direct refereces to objects I want to control
-        LveGameObject* playerBall = &(gameObjects.find(1)->second);
-        GolfBallController ballController{*playerBall, 0.09f};
+        LveGameObject* playerBall = &(gameObjects.find(10)->second);
+        GolfBallController ballController{*playerBall, 0.1f};
 
-        // LveGameObject* ballOutline = &(gameObjects.find(8)->second);
+        LveGameObject* ballAim = &(gameObjects.find(11)->second);
 
-        LveGameObject* ballAim = &(gameObjects.find(2)->second);
-
-        LveGameObject* ballPower = &(gameObjects.find(3)->second);
+        LveGameObject* ballPower = &(gameObjects.find(12)->second);
 
         std::vector<LveGameObject*> transparentObjects{};
-        transparentObjects.push_back(&(gameObjects.find(7)->second));
 
         // keep track of the old keystate for the C key (to help simulate "OnKeyDown" events)
         bool keyStateC = false;
@@ -127,10 +175,18 @@ namespace lve {
         // starting location for each track
         glm::vec3 tees[] = {
             { 0.0f, -0.11f, 0.0f },
-            { 18.0f, -0.11f, 7.0f }};
+            { 14.0f, -0.11f, 6.0f },
+            { 28.0f, -0.11f, 6.0f },
+            { 34.0f, -3.11f, -8.0f },
+            { 26.0f, -0.11f, -28.0f },
+            { 16.0f, -0.11f, -49.0f },
+            { -2.0f, -0.11f, -40.0f },
+            { -16.0f, -0.11f, -30.0f },
+            { -18.0f, -0.11f, -10.0f }};
         int current_tee = 0;
 
         auto currentTime = std::chrono::high_resolution_clock::now();
+        float totalTime = 0;
 
         std::cout << "Controls: \n  WASD - pivot the camera\n";
         std::cout << "  ARROW KEYS - rotate the camera\n  QE   - move up or down\n";
@@ -142,8 +198,9 @@ namespace lve {
             glfwPollEvents();
 
             auto newTime = std::chrono::high_resolution_clock::now();
-            // clamping frameTime to a minimum 0.1 seconds between frames to prevent some extreme edge cases in my collision system
+            // clamping frameTime to a maximum 0.1 seconds between frames to prevent some extreme edge cases in my collision system
             float frameTime = std::min(std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count(), 0.1f);
+            totalTime += frameTime;
             currentTime = newTime;
 
             if (playerBall->transform.translation.y > 0.2f)
@@ -151,13 +208,13 @@ namespace lve {
                 // ball reset plane
                 if (playerBall->transform.translation.y > 10)
                 {
-                    ballController.resetBall(tees[current_tee]);
+                    ballController.resetBall();
                 }
-                else if (!ballController.isMoving())
-                {
-                    current_tee = (current_tee + 1) % 2;
-                    ballController.resetBall(tees[current_tee]);
-                }
+                // else if (!ballController.isMoving())
+                // {
+                //     current_tee = (current_tee + 1) % 8;
+                //     ballController.nextHole(tees[current_tee]);
+                // }
             }
 
             // ============================
@@ -195,7 +252,17 @@ namespace lve {
             //      for this game, I'm only checking collision between the ball and each box collider
             // ====================================
             SphereCollider& sc = ballController.getCollider();
-            collisionManager.GetCollisions(sc, &GolfBallController::ForawrdOnCollision, &ballController);
+            collisionManager.GetCollisions(sc, &GolfBallController::ForwardOnCollision, &ballController);
+
+            // check if the ball is in the goal
+            if (!ballController.isMoving())
+            {
+                if (goals[current_tee].CollidesWith(sc))
+                {
+                    current_tee = (current_tee + 1) % 8;
+                    ballController.nextHole(tees[current_tee]);
+                }
+            }
 
             // if the player is currently focusing on the ball, pivot the camera around the ball
             // This could probably use its own controller, but as its behaviour is very specific to this case in the program
@@ -259,10 +326,10 @@ namespace lve {
                 
                 // render
                 lveRenderer.beginSwapChainRenderPass(commandBuffer);
-                simpleRenderSystem.renderGameObjects(frameInfo);
+                simpleRenderSystem.renderGameObjects(frameInfo, 0);
+                golfTurfRenderSystem.renderGameObjects(frameInfo, 1, totalTime);
                 outlineRenderer.renderGameObjects(frameInfo);
-                PointLightSystem.render(frameInfo);
-                transparentRender.renderGameObjects(frameInfo, transparentObjects);
+                //PointLightSystem.render(frameInfo);
                 if (showCollisionDebug)
                 {
                     wireframeRenderer.renderGameObjects(frameInfo, staticColliderWireframes);
@@ -275,27 +342,99 @@ namespace lve {
         vkDeviceWaitIdle(lveDevice.device());
     }
 
-    void FirstApp::loadGameObjects() {
+    void App::loadGameObjects() {
         std::shared_ptr<LveModel> lveModel;
 
-        lveModel = LveModel::createModelFromFile(lveDevice,
-            "models/hole1.obj");
-        auto golfCourse = LveGameObject::createGameObject();
-        golfCourse.model = lveModel;
-        golfCourse.transform.translation = {0.0f, 0.0f, 0.0f};
-        golfCourse.transform.scale = {1.0f, 1.0f, 1.0f};
-        golfCourse.outline = true;
-        gameObjects.emplace(golfCourse.getId(), std::move(golfCourse));
+        lveModel = LveModel::createModelFromFile(lveDevice, "models/course/course1r_h1.obj");
+        auto h1 = LveGameObject::createGameObject();
+        h1.model = lveModel;
+        h1.transform.translation = { 0.0f, 0.0f, 0.0f };
+        h1.transform.scale = { 1.0f, 1.0f, 1.0f };
+        h1.materialId = 1;
+        gameObjects.emplace(h1.getId(), std::move(h1));
+
+        lveModel = LveModel::createModelFromFile(lveDevice, "models/course/course1r_bumpers.obj");
+        h1 = LveGameObject::createGameObject();
+        h1.model = lveModel;
+        h1.transform.translation = { 0.0f, 0.0f, 0.0f };
+        h1.transform.scale = { 1.0f, 1.0f, 1.0f };
+        h1.materialId = 0;
+        h1.outline = true;
+        gameObjects.emplace(h1.getId(), std::move(h1));
+
+        lveModel = LveModel::createModelFromFile(lveDevice, "models/course/course1r_h2.obj");
+        auto h2 = LveGameObject::createGameObject();
+        h2.model = lveModel;
+        h2.transform.translation = { 0.0f, 0.0f, 0.0f };
+        h2.transform.scale = { 1.0f, 1.0f, 1.0f };
+        h2.materialId = 1;
+        gameObjects.emplace(h2.getId(), std::move(h2));
+
+        lveModel = LveModel::createModelFromFile(lveDevice, "models/course/course1r_h3.obj");
+        auto h3 = LveGameObject::createGameObject();
+        h3.model = lveModel;
+        h3.transform.translation = { 0.0f, 0.0f, 0.0f };
+        h3.transform.scale = { 1.0f, 1.0f, 1.0f };
+        h3.materialId = 1;
+        gameObjects.emplace(h3.getId(), std::move(h3));
+
+        lveModel = LveModel::createModelFromFile(lveDevice, "models/course/course1r_h4.obj");
+        auto h4 = LveGameObject::createGameObject();
+        h4.model = lveModel;
+        h4.transform.translation = { 0.0f, 0.0f, 0.0f };
+        h4.transform.scale = { 1.0f, 1.0f, 1.0f };
+        h4.materialId = 1;
+        gameObjects.emplace(h4.getId(), std::move(h4));
+
+        lveModel = LveModel::createModelFromFile(lveDevice, "models/course/course1r_h5.obj");
+        auto h5 = LveGameObject::createGameObject();
+        h5.model = lveModel;
+        h5.transform.translation = { 0.0f, 0.0f, 0.0f };
+        h5.transform.scale = { 1.0f, 1.0f, 1.0f };
+        h5.materialId = 1;
+        gameObjects.emplace(h5.getId(), std::move(h5));
+
+        lveModel = LveModel::createModelFromFile(lveDevice, "models/course/course1r_h6.obj");
+        auto h6 = LveGameObject::createGameObject();
+        h6.model = lveModel;
+        h6.transform.translation = { 0.0f, 0.0f, 0.0f };
+        h6.transform.scale = { 1.0f, 1.0f, 1.0f };
+        h6.materialId = 1;
+        gameObjects.emplace(h6.getId(), std::move(h6));
+
+        lveModel = LveModel::createModelFromFile(lveDevice, "models/course/course1r_h7.obj");
+        auto h7 = LveGameObject::createGameObject();
+        h7.model = lveModel;
+        h7.transform.translation = { 0.0f, 0.0f, 0.0f };
+        h7.transform.scale = { 1.0f, 1.0f, 1.0f };
+        h7.materialId = 1;
+        gameObjects.emplace(h7.getId(), std::move(h7));
+
+        lveModel = LveModel::createModelFromFile(lveDevice, "models/course/course1r_h8.obj");
+        auto h8 = LveGameObject::createGameObject();
+        h8.model = lveModel;
+        h8.transform.translation = { 0.0f, 0.0f, 0.0f };
+        h8.transform.scale = { 1.0f, 1.0f, 1.0f };
+        h8.materialId = 1;
+        gameObjects.emplace(h8.getId(), std::move(h8));
+
+        lveModel = LveModel::createModelFromFile(lveDevice, "models/course/course1r_h9.obj");
+        auto h9 = LveGameObject::createGameObject();
+        h9.model = lveModel;
+        h9.transform.translation = { 0.0f, 0.0f, 0.0f };
+        h9.transform.scale = { 1.0f, 1.0f, 1.0f };
+        h9.materialId = 1;
+        gameObjects.emplace(h9.getId(), std::move(h9));
 
         lveModel = LveModel::createModelFromFile(lveDevice,
             "models/ball.obj");
         auto golfBall = LveGameObject::createGameObject();
         golfBall.model = lveModel;
         golfBall.transform.translation = {0.0f, -0.11f, 0.0f};
-        golfBall.transform.scale = {1.0f, 1.0f, 1.0f};
+        golfBall.transform.scale = {0.6f, 0.6f, 0.6f};
         golfBall.specular = 1.0f;
         golfBall.outline = true;
-        // id = 1
+        // id = 9
         gameObjects.emplace(golfBall.getId(), std::move(golfBall));
 
         lveModel = LveModel::createModelFromFile(lveDevice,
@@ -304,7 +443,7 @@ namespace lve {
         ballAim.model = lveModel;
         ballAim.transform.translation = {0.0f, -0.1f, 0.0f};
         ballAim.transform.scale = {0.12f, 0.1f, 0.12f};
-        // id = 2
+        // id = 10
         gameObjects.emplace(ballAim.getId(), std::move(ballAim));
 
         lveModel = LveModel::createModelFromFile(lveDevice,
@@ -313,71 +452,8 @@ namespace lve {
         ballPow.model = lveModel;
         ballPow.transform.translation = {0.0f, -0.1f, 0.1f};
         ballPow.transform.scale = {0.12f, 0.1f, 0.12f};
-        // id = 3
+        // id = 11
         gameObjects.emplace(ballPow.getId(), std::move(ballPow));
-
-        lveModel = LveModel::createModelFromFile(lveDevice,
-            "models/terrain.obj");
-        auto ter = LveGameObject::createGameObject();
-        ter.model = lveModel;
-        ter.transform.translation = {0.0f, 0.0f, 0.0f};
-        ter.transform.scale = {1.0f, 1.0f, 1.0f};
-        gameObjects.emplace(ter.getId(), std::move(ter));
-
-        lveModel = LveModel::createModelFromFile(lveDevice,
-            "models/rock_path.obj");
-        auto rocks = LveGameObject::createGameObject();
-        rocks.model = lveModel;
-        rocks.transform.translation = {0.0f, 0.0f, 0.0f};
-        rocks.transform.scale = {1.0f, 1.0f, 1.0f};
-        rocks.specular = 0.3f;
-        gameObjects.emplace(rocks.getId(), std::move(rocks));
-
-        lveModel = LveModel::createModelFromFile(lveDevice,
-            "models/table.obj");
-        auto table = LveGameObject::createGameObject();
-        table.model = lveModel;
-        table.transform.translation = {2.0f, 0.0f, 5.0f};
-        table.transform.scale = {1.0f, 1.0f, 1.0f};
-        table.specular = 1.0f;
-        table.outline = true;
-        gameObjects.emplace(table.getId(), std::move(table));
-
-        lveModel = LveModel::createModelFromFile(lveDevice,
-            "models/table_glass.obj");
-        auto ttop = LveGameObject::createGameObject();
-        ttop.model = lveModel;
-        ttop.transform.translation = {2.0f, 0.0f, 5.0f};
-        ttop.transform.scale = {1.0f, 1.0f, 1.0f};
-        ttop.alpha = 0.4f;
-        // id = 7
-        gameObjects.emplace(ttop.getId(), std::move(ttop));
-
-        lveModel = LveModel::createModelFromFile(lveDevice,
-            "models/hole2.obj");
-        auto hole2 = LveGameObject::createGameObject();
-        hole2.model = lveModel;
-        hole2.transform.translation = {18.0f, 0.0f, 7.0f};
-        hole2.transform.scale = {1.0f, 1.0f, 1.0f};
-        hole2.outline = true;
-        gameObjects.emplace(hole2.getId(), std::move(hole2));
-
-        lveModel = LveModel::createModelFromFile(lveDevice,
-            "models/river.obj");
-        auto river = LveGameObject::createGameObject();
-        river.model = lveModel;
-        river.transform.translation = {0.0f, 0.0f, 0.0f};
-        river.transform.scale = {1.0f, 1.0f, 1.0f};
-        gameObjects.emplace(river.getId(), std::move(river));
-
-        lveModel = LveModel::createModelFromFile(lveDevice,
-            "models/hole3.obj");
-        auto hole3 = LveGameObject::createGameObject();
-        hole3.model = lveModel;
-        hole3.transform.translation = {0.0f, 0.0f, 0.0f};
-        hole3.transform.scale = {1.0f, 1.0f, 1.0f};
-        hole3.outline = true;
-        gameObjects.emplace(hole3.getId(), std::move(hole3));
 
         lveModel = LveModel::createModelFromFile(lveDevice,
             "models/THE_CUBES.obj");
@@ -389,56 +465,60 @@ namespace lve {
         cubes.outline = true;
         gameObjects.emplace(cubes.getId(), std::move(cubes));
 
-        lveModel = LveModel::createModelFromFile(lveDevice,
-            "models/lamp.obj");
-        auto lamp = LveGameObject::createGameObject();
-        lamp.model = lveModel;
-        lamp.transform.translation = {5.0f, 0.0f, 2.0f};
-        lamp.transform.scale = {1.0f, 1.0f, 1.0f};
-        lamp.specular = 0.6f;
-        gameObjects.emplace(lamp.getId(), std::move(lamp));
+        lveModel = LveModel::createModelFromFile(lveDevice, "models/ballhole.obj");
+        auto go = LveGameObject::createGameObject();
+        go.model = lveModel;
+        go.transform.translation = { 14.0f, 0.0f, 0.0f };
+        go.transform.scale = { 1.0f, 1.0f, 1.0f };
+        gameObjects.emplace(go.getId(), std::move(go));
 
-        lamp = LveGameObject::createGameObject();
-        lamp.model = lveModel;
-        lamp.transform.translation = { 22.0f, 0.0f, 11.0f };
-        lamp.transform.scale = {1.0f, 1.0f, 1.0f};
-        lamp.specular = 0.6f;
-        gameObjects.emplace(lamp.getId(), std::move(lamp));
+        go = LveGameObject::createGameObject();
+        go.model = lveModel;
+        go.transform.translation = { 22.0f, 0.0f, 8.0f };
+        go.transform.scale = { 1.0f, 1.0f, 1.0f };
+        gameObjects.emplace(go.getId(), std::move(go));
 
-        lamp = LveGameObject::createGameObject();
-        lamp.model = lveModel;
-        lamp.transform.translation = { 24.0f, 0.0f, 6.0f };
-        lamp.transform.scale = {1.0f, 1.0f, 1.0f};
-        lamp.specular = 0.6f;
-        gameObjects.emplace(lamp.getId(), std::move(lamp));
+        go = LveGameObject::createGameObject();
+        go.model = lveModel;
+        go.transform.translation = { 28.0f, -2.0f, -4.0f };
+        go.transform.scale = { 1.0f, 1.0f, 1.0f };
+        gameObjects.emplace(go.getId(), std::move(go));
 
-        lamp = LveGameObject::createGameObject();
-        lamp.model = lveModel;
-        lamp.transform.translation = { 34.75f, 0.0f, -2.0f };
-        lamp.transform.scale = {1.0f, 1.0f, 1.0f};
-        lamp.specular = 0.6f;
-        gameObjects.emplace(lamp.getId(), std::move(lamp));
+        go = LveGameObject::createGameObject();
+        go.model = lveModel;
+        go.transform.translation = { 28.0f, 0.0f, -22.0f };
+        go.transform.scale = { 1.0f, 1.0f, 1.0f };
+        gameObjects.emplace(go.getId(), std::move(go));
 
-        lamp = LveGameObject::createGameObject();
-        lamp.model = lveModel;
-        lamp.transform.translation = { 37.25f, 0.0f, -2.0f };
-        lamp.transform.scale = {1.0f, 1.0f, 1.0f};
-        lamp.specular = 0.6f;
-        gameObjects.emplace(lamp.getId(), std::move(lamp));
+        go = LveGameObject::createGameObject();
+        go.model = lveModel;
+        go.transform.translation = { 20.0f, 0.0f, -42.0f };
+        go.transform.scale = { 1.0f, 1.0f, 1.0f };
+        gameObjects.emplace(go.getId(), std::move(go));
 
-        lamp = LveGameObject::createGameObject();
-        lamp.model = lveModel;
-        lamp.transform.translation = { 34.75f, 0.0f, -10.0f };
-        lamp.transform.scale = {1.0f, 1.0f, 1.0f};
-        lamp.specular = 0.6f;
-        gameObjects.emplace(lamp.getId(), std::move(lamp));
+        go = LveGameObject::createGameObject();
+        go.model = lveModel;
+        go.transform.translation = { 1.5f, 0.0f, -46.0f };
+        go.transform.scale = { 1.0f, 1.0f, 1.0f };
+        gameObjects.emplace(go.getId(), std::move(go));
 
-        lamp = LveGameObject::createGameObject();
-        lamp.model = lveModel;
-        lamp.transform.translation = { 37.25f, 0.0f, -10.0f };
-        lamp.transform.scale = {1.0f, 1.0f, 1.0f};
-        lamp.specular = 0.6f;
-        gameObjects.emplace(lamp.getId(), std::move(lamp));
+        go = LveGameObject::createGameObject();
+        go.model = lveModel;
+        go.transform.translation = { -10.0f, 0.0f, -31.5f };
+        go.transform.scale = { 1.0f, 1.0f, 1.0f };
+        gameObjects.emplace(go.getId(), std::move(go));
+
+        go = LveGameObject::createGameObject();
+        go.model = lveModel;
+        go.transform.translation = { -20.0f, -0.5f, -20.0f };
+        go.transform.scale = { 1.0f, 1.0f, 1.0f };
+        gameObjects.emplace(go.getId(), std::move(go));
+
+        go = LveGameObject::createGameObject();
+        go.model = lveModel;
+        go.transform.translation = { 10.5f, 0.0f, -24.0f };
+        go.transform.scale = { 1.0f, 1.0f, 1.0f };
+        gameObjects.emplace(go.getId(), std::move(go));
 
         // ==============================================
         //              Let there be trees!
@@ -446,7 +526,7 @@ namespace lve {
         lveModel = LveModel::createModelFromFile(lveDevice,
             "models/tree.obj");
 
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 0; i++)
         {
             auto tree = LveGameObject::createGameObject();
             tree.model = lveModel;
@@ -455,7 +535,7 @@ namespace lve {
             gameObjects.emplace(tree.getId(), std::move(tree));
         }
 
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 0; i++)
         {
             auto tree = LveGameObject::createGameObject();
             tree.model = lveModel;
@@ -501,5 +581,15 @@ namespace lve {
         pointLight.color = { 0.0f, 1.0f, 1.0f };
         pointLight.transform.translation = { 37.25f, -3.4f, -10.0f };
         gameObjects.emplace(pointLight.getId(), std::move(pointLight));
+    }
+
+    void App::loadColliders(std::vector<BoxCollider> &colliderList, const char filename[], LveGameObject* parent)
+    {
+        std::vector<BoxCollider> colliders2 = CollisionManager::readCollidersFromFile(filename);
+        for (BoxCollider bc : colliders2)
+        {
+            bc.gameObject = parent;
+            colliderList.push_back(bc);
+        }
     }
 }  // namespace lve

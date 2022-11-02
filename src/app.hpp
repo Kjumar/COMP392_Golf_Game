@@ -6,26 +6,30 @@
 #include "lve_renderer.hpp"
 #include "lve_descriptors.hpp"
 
+#include "collision/collision.hpp"
+#include "collision/collision_manager.hpp"
+
 // std
 #include <memory>
 #include <vector>
 
 namespace lve {
-  class FirstApp {
+  class App {
   public:
     static constexpr int WIDTH = 800;
     static constexpr int HEIGHT = 600;
 
-    FirstApp();
-    ~FirstApp();
+    App();
+    ~App();
 
-    FirstApp(const FirstApp &) = delete;
-    FirstApp &operator=(const FirstApp &) = delete;
+    App(const App &) = delete;
+    App &operator=(const App &) = delete;
 
     void run();
 
   private:
     void loadGameObjects();
+    void loadColliders(std::vector<BoxCollider> &colliderList, const char filename[], LveGameObject* parent);
 
     LveWindow lveWindow{WIDTH, HEIGHT, "Untitled Golf Game"};
     LveDevice lveDevice{lveWindow};

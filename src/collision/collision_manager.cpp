@@ -11,7 +11,7 @@
 namespace lve
 {
 
-    const AABB WORLDSIZE = {0, glm::vec2(-1000, -1000), glm::vec2(1000, 1000)};
+    const AABB WORLDSIZE = {0, glm::vec2(-100, -150), glm::vec2(100, 50)};
 
     CollisionManager::CollisionManager()
     {
@@ -91,11 +91,6 @@ namespace lve
 
     void CollisionManager::buildStaticTree()
     {
-        for (ICollider* col : staticColliders)
-        {
-            AABB box = col->GetAABB();
-            std::cout << box.colliderIndex << ": (" << box.min.x << ", " << box.min.y << ") (" << box.max.x << ", " << box.max.y << ")\n";
-        }
         for (int i = 0; i < staticColliders.size(); i++)
         {
 
@@ -105,7 +100,7 @@ namespace lve
             staticTree.Insert(aabb, WORLDSIZE);
         }
 
-        // staticTree.Display("root");
+        staticTree.Display("root");
     }
 
     void CollisionManager::GetCollisions(ICollider& other, void (*OnCollision)(void*, Collision), void* context)

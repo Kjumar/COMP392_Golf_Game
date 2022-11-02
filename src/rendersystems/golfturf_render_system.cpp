@@ -1,4 +1,4 @@
-#include "simple_render_system.hpp"
+#include "golfturf_render_system.hpp"
 
 // libs
 #define GLM_FORCE_RADIANS
@@ -19,16 +19,16 @@ namespace lve {
         glm::mat4 normalMatrix{ 1.0f };
     };
 
-    SimpleRenderSystem::SimpleRenderSystem(
+    GolfturfRenderSystem::GolfturfRenderSystem(
         LveDevice& device, VkRenderPass renderPass, VkDescriptorSetLayout globalSetLayout)
         : lveDevice{ device } {
         createPipelineLayout(globalSetLayout);
         createPipeline(renderPass);
     }
 
-    SimpleRenderSystem::~SimpleRenderSystem() { vkDestroyPipelineLayout(lveDevice.device(), pipelineLayout, nullptr); }
+    GolfturfRenderSystem::~GolfturfRenderSystem() { vkDestroyPipelineLayout(lveDevice.device(), pipelineLayout, nullptr); }
 
-    void SimpleRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
+    void GolfturfRenderSystem::createPipelineLayout(VkDescriptorSetLayout globalSetLayout) {
 
         VkPushConstantRange pushConstantRange{};
         pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -49,7 +49,7 @@ namespace lve {
         }
     }
 
-    void SimpleRenderSystem::createPipeline(VkRenderPass renderPass) {
+    void GolfturfRenderSystem::createPipeline(VkRenderPass renderPass) {
         assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout");
 
         PipelineConfigInfo pipelineConfig{};
@@ -59,12 +59,12 @@ namespace lve {
         pipelineConfig.pipelineLayout = pipelineLayout;
         lvePipeline = std::make_unique<LvePipeline>(
             lveDevice,
-            "shaders/simple_shader.vert.spv",
-            "shaders/simple_shader.frag.spv",
+            "shaders/golfturf.vert.spv",
+            "shaders/golfturf.frag.spv",
             pipelineConfig);
     }
 
-    void SimpleRenderSystem::renderGameObjects(FrameInfo &frameInfo)
+    void GolfturfRenderSystem::renderGameObjects(FrameInfo &frameInfo, int materialId, float time)
     {
         lvePipeline->bind(frameInfo.commandBuffer);
 
@@ -80,16 +80,12 @@ namespace lve {
 
         for (auto& kv : frameInfo.gameObjects) {
             auto& obj = kv.second;
-            if (obj.model == nullptr || !obj.isVisible || obj.alpha < 1.0f) continue;
+            if (obj.model == nullptr || !obj.isVisible || obj.materialId != materialId) continue;
             SimplePushConstantData push{};
             push.modelMatrix = obj.transform.mat4();
             push.normalMatrix = obj.transform.normalMatrix();
-            // fun fact, sending 2 mat4s through push constant data means we are already hitting the
-            // 128 byte minimum specs designated by vulkan. My gpu does support an extra 4 bytes
-            // but we're also wasting 7x4 bytes by aligning the mat3 normalMatrix as a mat4
-            // so I've opted to use one of these empty spots to sneak in a specular value while still
-            // remaining under 128 bytes
             push.normalMatrix[3][3] = obj.specular;
+            push.normalMatrix[3][0] = time;
 
             vkCmdPushConstants(frameInfo.commandBuffer,
                 pipelineLayout,

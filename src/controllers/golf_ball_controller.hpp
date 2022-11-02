@@ -6,6 +6,8 @@
 #include "../collision/sphere_collider.hpp"
 
 #include <glm/glm.hpp>
+#include <string>
+#include <vector>
 
 namespace lve
 {
@@ -26,7 +28,7 @@ namespace lve
 
         SphereCollider& getCollider();
         void onCollision(const Collision& collision);
-        static void ForawrdOnCollision(void* context, Collision collision)
+        static void ForwardOnCollision(void* context, Collision collision)
         {
             static_cast<GolfBallController*>(context)->onCollision(collision);
         }
@@ -34,7 +36,9 @@ namespace lve
         bool showReticle();
         float getPowerRatio();
 
+        void resetBall();
         void resetBall(glm::vec3 position);
+        void nextHole(glm::vec3 position);
         bool isMoving();
         
         LveGameObject& gameObject;
@@ -48,13 +52,17 @@ namespace lve
         float power{ 0.0f };
         float maxPower{ 10.0f };
 		float lookSpeed{ 1.5f };
-        float gravity{ 9.8f };
-        float friction{ 0.5f };
-        float drag{ 0.5f };
+        float gravity{ 14.7f };
+        float friction{ 0.6f };
+        float drag{ 0.1f };
 
         bool moving = false;
         bool aiming = false;
         bool bIsGrounded = false;
+
+        std::vector<std::string> courseIds = {"c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9"};
+        int currentCourse = 0;
+        glm::vec3 previousPos{0.0f};
 
         SphereCollider collider;
     };

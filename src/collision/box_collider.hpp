@@ -15,6 +15,7 @@ namespace lve
     public:
         BoxCollider(glm::vec3 position, glm::vec4 axis1, glm::vec4 axis2, glm::vec4 axis3);
         BoxCollider(glm::vec3 position, glm::vec3 axis1, glm::vec3 axis2, glm::vec3 axis3);
+
         bool GetImpulse(ICollider* other, Collision& collision);
 
         bool CollidesWith(ICollider& other);
