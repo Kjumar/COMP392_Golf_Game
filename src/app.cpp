@@ -30,6 +30,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#define MAX_HOLES 9
+
 namespace lve {
 
     App::App() {
@@ -128,6 +130,7 @@ namespace lve {
         loadColliders(colliders, "models/collision/hole6_colliders.boxc", &courses[5]);
         loadColliders(colliders, "models/collision/hole7_colliders.boxc", &courses[6]);
         loadColliders(colliders, "models/collision/hole8_colliders.boxc", &courses[7]);
+        loadColliders(colliders, "models/collision/hole9_colliders.boxc", &courses[8]);
 
         bool showCollisionDebug = false;
         std::vector<LveModel*> staticColliderWireframes;
@@ -150,7 +153,7 @@ namespace lve {
             BoxCollider({1.5f, 0.5f, -46.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f}),
             BoxCollider({-10.0f, 0.5f, -31.5f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f}),
             BoxCollider({-20.0f, 0.0f, -20.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f}),
-            BoxCollider({10.5f, 0.5f, -24.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f})
+            BoxCollider({9.0f, 0.25f, -24.0f}, {1.0f, 0.0f, 0.0f, 0.15f}, {0.0f, 0.0f, 1.0f, 0.15f}, {0.0f, 1.0f, 0.0f, 0.25f})
         };
 
         for (BoxCollider collider : goals)
@@ -182,7 +185,7 @@ namespace lve {
             { 16.0f, -0.11f, -49.0f },
             { -2.0f, -0.11f, -40.0f },
             { -16.0f, -0.11f, -30.0f },
-            { -18.0f, -0.11f, -10.0f }};
+            { -10.0f, -2.11f, -12.0f }};
         int current_tee = 0;
 
         auto currentTime = std::chrono::high_resolution_clock::now();
@@ -212,7 +215,7 @@ namespace lve {
                 }
                 // else if (!ballController.isMoving())
                 // {
-                //     current_tee = (current_tee + 1) % 8;
+                //     current_tee = (current_tee + 1) % MAX_HOLES;
                 //     ballController.nextHole(tees[current_tee]);
                 // }
             }
@@ -259,7 +262,7 @@ namespace lve {
             {
                 if (goals[current_tee].CollidesWith(sc))
                 {
-                    current_tee = (current_tee + 1) % 8;
+                    current_tee = (current_tee + 1) % MAX_HOLES;
                     ballController.nextHole(tees[current_tee]);
                 }
             }
@@ -516,7 +519,7 @@ namespace lve {
 
         go = LveGameObject::createGameObject();
         go.model = lveModel;
-        go.transform.translation = { 10.5f, 0.0f, -24.0f };
+        go.transform.translation = { 9.0f, -0.25f, -24.0f };
         go.transform.scale = { 1.0f, 1.0f, 1.0f };
         gameObjects.emplace(go.getId(), std::move(go));
 

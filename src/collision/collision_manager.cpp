@@ -100,7 +100,7 @@ namespace lve
             staticTree.Insert(aabb, WORLDSIZE);
         }
 
-        staticTree.Display("root");
+        //staticTree.Display("root");
     }
 
     void CollisionManager::GetCollisions(ICollider& other, void (*OnCollision)(void*, Collision), void* context)
